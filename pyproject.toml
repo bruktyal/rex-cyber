@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rex-iot"
+version = "0.1.0"
+description = "Rex — C++-accelerated IoT Security Framework for sensor networks"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["iot", "security", "hmac", "nids", "anomaly-detection", "encryption"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C++",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+]
+
+dependencies = [
+    "cryptography>=41.0.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110.0", "uvicorn>=0.29.0"]
+db  = ["sqlalchemy>=2.0"]
+all = ["rex-iot[api,db]"]
+
+[project.scripts]
+rex-cli = "rex.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rex*"]
+
+[tool.setuptools.package-data]
+"rex.core" = ["lib/*.dll", "lib/*.so"]

@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environment & Config
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Databases / Logs
+*.jsonl
+data/
+*.log
+
+# C++ IDEs & Builds
+.vscode/
+.idea/
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# Keep compiled Windows DLL inside core for packaging
+# !rex/core/lib/rex_gateway.dll
