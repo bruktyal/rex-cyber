@@ -14,9 +14,12 @@ logger = logging.getLogger("Rex.CLI")
 
 
 def run_demo():
-    print("\n" + "=" * 60)
-    print("  REX IoT SECURITY FRAMEWORK — CORE ENGINE DEMO")
-    print("=" * 60)
+    from rich.console import Console
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    from rich.panel import Panel
+    
+    console = Console()
+    console.print(Panel.fit("[bold green]  REX IoT SECURITY FRAMEWORK — CORE ENGINE DEMO  [/bold green]", subtitle="High-Performance Edge Protection", border_style="green"))
     
     # 1. Initialize Engine and Dashboard
     config = RexConfig()
@@ -33,137 +36,167 @@ def run_demo():
         dash.register_device(dev_id, region, stype)
 
     # 3. Process normal packets
-    print("\n[STEP 1] Ingesting validated sensor readings...")
+    console.print("\n[bold cyan][STEP 1] Ingesting validated sensor readings...[/bold cyan]")
     # Generate signature using HMAC
     import hashlib
     import hmac
     from rex.engine import REX_MASTER_KEY_BYTES
     secret_bytes = REX_MASTER_KEY_BYTES
     
-    for dev_id, region, stype in devices:
-        t_ms = int(time.time() * 1000)
-        value = 25.0
-        payload = engine.serialize_packet(
-            device_id=dev_id,
-            region=region,
-            location="East-Field",
-            sensor_type=stype,
-            value=value,
-            timestamp_ms=t_ms,
-            sequence_number=1,
-            flags=0
-        )
-        sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
-        
-        res = engine.validate_packet(
-            device_id=dev_id,
-            region=region,
-            location="East-Field",
-            sensor_type=stype,
-            value=value,
-            sequence_number=1,
-            timestamp_ms=t_ms,
-            hmac_signature=sig
-        )
-        dash.update_device(dev_id, value)
-        print(f"  {dev_id} ({stype}={value}) -> Status: {res['status']} | Source: {res.get('source', 'N/A')}")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(bar_width=30, complete_style="green", finished_style="bold green"),
+        TaskProgressColumn(),
+        console=console
+    ) as progress:
+        task = progress.add_task("[green]Verifying HMAC signatures...", total=len(devices))
+        for dev_id, region, stype in devices:
+            time.sleep(0.4)  # Live delay simulation
+            t_ms = int(time.time() * 1000)
+            value = 25.0
+            payload = engine.serialize_packet(
+                device_id=dev_id,
+                region=region,
+                location="East-Field",
+                sensor_type=stype,
+                value=value,
+                timestamp_ms=t_ms,
+                sequence_number=1,
+                flags=0
+            )
+            sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
+            
+            res = engine.validate_packet(
+                device_id=dev_id,
+                region=region,
+                location="East-Field",
+                sensor_type=stype,
+                value=value,
+                sequence_number=1,
+                timestamp_ms=t_ms,
+                hmac_signature=sig
+            )
+            dash.update_device(dev_id, value)
+            console.print(f"  [bold green]✓[/bold green] {dev_id} ({stype}={value}) -> Status: [green]{res['status']}[/green] | Source: [cyan]{res.get('source', 'N/A')}[/cyan]")
+            progress.advance(task)
 
     # 4. Trigger rate limit alerts
-    print("\n[STEP 2] Simulating high-frequency DoS / Flooding attack...")
-    seq_num = 2
-    for _ in range(config.max_packet_rate + 10):
-        t_ms = int(time.time() * 1000)
-        payload = engine.serialize_packet(
-            device_id="REX-NODE-001",
-            region="Zone-A",
-            location="East-Field",
-            sensor_type="soil_moisture",
-            value=35.0,
-            timestamp_ms=t_ms,
-            sequence_number=seq_num,
-            flags=0
-        )
-        sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
-        
-        res = engine.validate_packet(
-            device_id="REX-NODE-001",
-            region="Zone-A",
-            location="East-Field",
-            sensor_type="soil_moisture",
-            value=35.0,
-            sequence_number=seq_num,
-            timestamp_ms=t_ms,
-            hmac_signature=sig
-        )
-        seq_num += 1
-        if res["status"] != "OK":
-            dash.log_event({
-                "device_id": "REX-NODE-001",
-                "threat_level": "HIGH",
-                "description": res.get("reason", "unknown error")
-            })
-            print(f"  --> Blocked Flooding Event: {res['reason']}")
-            break
+    console.print("\n[bold red][STEP 2] Simulating high-frequency DoS / Flooding attack...[/bold red]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(bar_width=30, complete_style="red", finished_style="bold red"),
+        TaskProgressColumn(),
+        console=console
+    ) as progress:
+        total_packets = config.max_packet_rate + 10
+        task = progress.add_task("[red]Ingesting fast packet burst...", total=total_packets)
+        seq_num = 2
+        for _ in range(total_packets):
+            time.sleep(0.05)  # Rapid packets
+            t_ms = int(time.time() * 1000)
+            payload = engine.serialize_packet(
+                device_id="REX-NODE-001",
+                region="Zone-A",
+                location="East-Field",
+                sensor_type="soil_moisture",
+                value=35.0,
+                timestamp_ms=t_ms,
+                sequence_number=seq_num,
+                flags=0
+            )
+            sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
+            
+            res = engine.validate_packet(
+                device_id="REX-NODE-001",
+                region="Zone-A",
+                location="East-Field",
+                sensor_type="soil_moisture",
+                value=35.0,
+                sequence_number=seq_num,
+                timestamp_ms=t_ms,
+                hmac_signature=sig
+            )
+            seq_num += 1
+            progress.advance(task)
+            if res["status"] != "OK":
+                dash.log_event({
+                    "device_id": "REX-NODE-001",
+                    "threat_level": "HIGH",
+                    "description": res.get("reason", "unknown error")
+                })
+                console.print(f"  [bold red]✕[/bold red] --> [bold red]Blocked Flooding Event:[/bold red] {res['reason']}")
+                break
 
     # 5. Statistical anomalies
-    print("\n[STEP 3] Inducing rolling statistical anomalies...")
-    # Build baseline history for REX-NODE-002
-    for seq in range(2, 15):
+    console.print("\n[bold yellow][STEP 3] Inducing rolling statistical anomalies...[/bold yellow]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(bar_width=30, complete_style="yellow", finished_style="bold yellow"),
+        TaskProgressColumn(),
+        console=console
+    ) as progress:
+        task = progress.add_task("[yellow]Warming up baseline...", total=14)
+        # Build baseline history for REX-NODE-002
+        for seq in range(2, 15):
+            t_ms = int(time.time() * 1000)
+            val = 20.0  # Normal stable readings
+            payload = engine.serialize_packet(
+                device_id="REX-NODE-002",
+                region="Zone-B",
+                location="East-Field",
+                sensor_type="temperature",
+                value=val,
+                timestamp_ms=t_ms,
+                sequence_number=seq,
+                flags=0
+            )
+            sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
+            engine.validate_packet(
+                device_id="REX-NODE-002", region="Zone-B", location="East-Field",
+                sensor_type="temperature", value=val, sequence_number=seq,
+                timestamp_ms=t_ms, hmac_signature=sig
+            )
+            time.sleep(0.08)
+            progress.advance(task)
+            
+        # Anomaly spike
+        time.sleep(0.15)
         t_ms = int(time.time() * 1000)
-        val = 20.0  # Normal stable readings
         payload = engine.serialize_packet(
             device_id="REX-NODE-002",
             region="Zone-B",
             location="East-Field",
             sensor_type="temperature",
-            value=val,
+            value=85.0,
             timestamp_ms=t_ms,
-            sequence_number=seq,
+            sequence_number=16,
             flags=0
         )
         sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
-        engine.validate_packet(
+        res = engine.validate_packet(
             device_id="REX-NODE-002", region="Zone-B", location="East-Field",
-            sensor_type="temperature", value=val, sequence_number=seq,
+            sensor_type="temperature", value=85.0, sequence_number=16,
             timestamp_ms=t_ms, hmac_signature=sig
         )
-        time.sleep(0.11)
-        
-    # Anomaly spike
-    time.sleep(0.15)
-    t_ms = int(time.time() * 1000)
-    payload = engine.serialize_packet(
-        device_id="REX-NODE-002",
-        region="Zone-B",
-        location="East-Field",
-        sensor_type="temperature",
-        value=85.0,
-        timestamp_ms=t_ms,
-        sequence_number=16,
-        flags=0
-    )
-    sig = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
-    res = engine.validate_packet(
-        device_id="REX-NODE-002", region="Zone-B", location="East-Field",
-        sensor_type="temperature", value=85.0, sequence_number=16,
-        timestamp_ms=t_ms, hmac_signature=sig
-    )
-    if res["status"] == "ANOMALY":
-        dash.log_event({
-            "device_id": "REX-NODE-002",
-            "threat_level": "MEDIUM",
-            "description": f"Value spike anomaly: temperature=85.0"
-        })
-        print(f"  --> Flagged Anomaly Event: {res['reason']}")
+        if res["status"] == "ANOMALY":
+            dash.log_event({
+                "device_id": "REX-NODE-002",
+                "threat_level": "MEDIUM",
+                "description": f"Value spike anomaly: temperature=85.0"
+            })
+            console.print(f"  [bold yellow]✕[/bold yellow] --> [bold yellow]Flagged Anomaly Event:[/bold yellow] {res['reason']}")
 
     # 6. Render dashboard
-    print("\n[STEP 4] Printing live SOC dashboard...")
+    console.print("\n[bold cyan][STEP 4] Printing live SOC dashboard...[/bold cyan]")
     dash.print_dashboard()
     
     # Export compliance report
     report_file = os.path.join(config.log_dir, "rex_report.json")
     dash.export_json(report_file)
-    print(f"  Demo complete. Exported report to: {report_file}\n")
+    console.print(f"\n[bold green]Demo complete![/bold green] Exported report to: [cyan]{report_file}[/cyan]\n")
 
 
 def run_report():
