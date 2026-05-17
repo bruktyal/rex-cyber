@@ -78,7 +78,7 @@ def run_demo():
                 hmac_signature=sig
             )
             dash.update_device(dev_id, value)
-            console.print(f"  [bold green]✓[/bold green] {dev_id} ({stype}={value}) -> Status: [green]{res['status']}[/green] | Source: [cyan]{res.get('source', 'N/A')}[/cyan]")
+            console.print(f"  [bold green][OK][/bold green] {dev_id} ({stype}={value}) -> Status: [green]{res['status']}[/green] | Source: [cyan]{res.get('source', 'N/A')}[/cyan]")
             progress.advance(task)
 
     # 4. Trigger rate limit alerts
@@ -126,7 +126,7 @@ def run_demo():
                     "threat_level": "HIGH",
                     "description": res.get("reason", "unknown error")
                 })
-                console.print(f"  [bold red]✕[/bold red] --> [bold red]Blocked Flooding Event:[/bold red] {res['reason']}")
+                console.print(f"  [bold red][BLOCKED][/bold red] --> [bold red]Blocked Flooding Event:[/bold red] {res['reason']}")
                 break
 
     # 5. Statistical anomalies
@@ -187,7 +187,7 @@ def run_demo():
                 "threat_level": "MEDIUM",
                 "description": f"Value spike anomaly: temperature=85.0"
             })
-            console.print(f"  [bold yellow]✕[/bold yellow] --> [bold yellow]Flagged Anomaly Event:[/bold yellow] {res['reason']}")
+            console.print(f"  [bold yellow][ANOMALY][/bold yellow] --> [bold yellow]Flagged Anomaly Event:[/bold yellow] {res['reason']}")
 
     # 6. Render dashboard
     console.print("\n[bold cyan][STEP 4] Printing live SOC dashboard...[/bold cyan]")
